@@ -14,17 +14,9 @@ const NotFound = require('../error/NotFound');
 const BadRequest = require('../error/BadRequest');
 const Conflict = require('../error/Conflict');
 
-const checkUser = (user, res, next) => {
-  if (user) {
-    return res.send({ data: user });
-  }
-  const error = new NotFound('Пользователь по указанному _id не найден');
-  return next(error);
-};
-
 module.exports.getInfoProfile = (req, res, next) => {
   User.findById(req.user._id)
-    .then((user) => res.send(user))
+    .then((user) => res.send({ data: user }))
     .catch((error) => {
       if (error instanceof DocumentNotFoundError) {
         next(new NotFound(`Пользователь не найден ${ERROR_NOT_FOUND}`));
@@ -45,7 +37,7 @@ module.exports.updateProfile = (req, res, next) => {
       runValidators: true,
     },
   )
-    .then((user) => checkUser(user, res))
+    .then((user) => res.send({ data: user }))
     .catch((error) => {
       if (error instanceof DocumentNotFoundError) {
         next(

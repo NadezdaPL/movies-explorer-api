@@ -11,17 +11,12 @@ const {
 } = require('../utils/constants');
 
 module.exports.getMovies = (req, res, next) => {
-  Movie.find({ owner: req.user._id })
+  const owner = req.user._id;
+  Movie.find({ owner })
     .then((card) => {
       res.status(CODE).send({ data: card });
     })
-    .catch((error) => {
-      if (error instanceof DocumentNotFoundError) {
-        next(new NotFound(`Фильмы не найдены ${ERROR_NOT_FOUND}`));
-      } else {
-        next(error);
-      }
-    });
+    .catch(next);
 };
 
 module.exports.createMovieCards = (req, res, next) => {
@@ -52,7 +47,7 @@ module.exports.createMovieCards = (req, res, next) => {
     nameEN,
     owner: req.user._id,
   })
-    .then((card) => res.status(CODE_CREATED).send({ data: card }))
+    .then((card) => res.status(CODE_CREATED).send(card))
     .catch((error) => {
       if (error instanceof ValidationError) {
         next(new BadRequest(`Переданы некорректные данные ${ERROR_CODE}`));
@@ -63,21 +58,16 @@ module.exports.createMovieCards = (req, res, next) => {
 };
 
 module.exports.deleteMovieCards = (req, res, next) => {
-  const _id = req.params.cardId;
-
-  Movie.findOne({ _id })
+  Movie.findById(req.params.cardId)
     .then((card) => {
-      if (!card) {
-        throw new Forbidden('Карточка была удалена');
-      }
-      if (card.owner._id.toString() !== req.user._id.toString()) {
+      if (card.owner.toString() === req.user._id) {
+        card.deleteOne();
+        res.send('Карточка удалена');
+      } else {
         throw new Forbidden(
           'Вы не можете удалить карточку другого пользователя',
         );
       }
-      return Movie.deleteOne({ _id }).then((cardDeleted) => {
-        res.send({ data: cardDeleted });
-      });
     })
     .catch((error) => {
       if (error instanceof DocumentNotFoundError) {
