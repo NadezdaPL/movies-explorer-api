@@ -1,25 +1,27 @@
-const { ValidationError, CastError, DocumentNotFoundError } = require('mongoose').Error;
-const BadRequest = require('../error/BadRequest');
+const Conflict = require('../error/Conflict');
 const Forbidden = require('../error/Forbidden');
 const NotFound = require('../error/NotFound');
 const Movie = require('../models/movies');
 const {
   CODE,
   CODE_CREATED,
-  ERROR_NOT_FOUND,
-  ERROR_CODE,
+  MOVIEDElETED,
+  FORBIDDENDELETE,
+  CONFLICTEMOVIE,
 } = require('../utils/constants');
 
 module.exports.getMovies = (req, res, next) => {
   const owner = req.user._id;
   Movie.find({ owner })
+    .populate([{ path: 'owner', model: 'user' }])
     .then((card) => {
-      res.status(CODE).send({ data: card });
+      res.status(CODE).send(card);
     })
     .catch(next);
 };
 
 module.exports.createMovieCards = (req, res, next) => {
+  const owner = req.user._id;
   const {
     country,
     director,
@@ -33,51 +35,51 @@ module.exports.createMovieCards = (req, res, next) => {
     nameRU,
     nameEN,
   } = req.body;
-  Movie.create({
-    country,
-    director,
-    duration,
-    year,
-    description,
-    image,
-    trailerLink,
-    thumbnail,
-    movieId,
-    nameRU,
-    nameEN,
-    owner: req.user._id,
-  })
-    .then((card) => res.status(CODE_CREATED).send(card))
-    .catch((error) => {
-      if (error instanceof ValidationError) {
-        next(new BadRequest(`Переданы некорректные данные ${ERROR_CODE}`));
+  Movie.find({ owner, movieId })
+    .then((addedCard) => {
+      if (addedCard.length) {
+        throw new Conflict(CONFLICTEMOVIE);
       } else {
-        next(error);
+        Movie.create({
+          country,
+          director,
+          duration,
+          year,
+          description,
+          image,
+          trailerLink,
+          thumbnail,
+          movieId,
+          nameRU,
+          nameEN,
+          owner,
+        })
+          .then((card) => card.populate('owner'))
+          .then((card) => res.status(CODE_CREATED).send(card))
+          .catch(next);
       }
-    });
+    })
+    .catch((error) => next(error));
 };
 
 module.exports.deleteMovieCards = (req, res, next) => {
-  Movie.findById(req.params.cardId)
+  const _id = req.params.movieId;
+  Movie.findOne({ _id })
+    .populate([
+      { path: 'owner', model: 'user' },
+    ])
     .then((card) => {
-      if (card.owner.toString() === req.user._id) {
-        card.deleteOne();
-        res.send('Карточка удалена');
-      } else {
-        throw new Forbidden(
-          'Вы не можете удалить карточку другого пользователя',
-        );
+      if (!card) {
+        throw new NotFound(MOVIEDElETED);
       }
+      if (card.owner._id.toString() !== req.user._id.toString()) {
+        throw new Forbidden(FORBIDDENDELETE);
+      }
+      return card
+        .deleteOne()
+        .then((cardDeleted) => {
+          res.send(cardDeleted);
+        });
     })
-    .catch((error) => {
-      if (error instanceof DocumentNotFoundError) {
-        next(
-          new NotFound(`Карточка с указанным _id не найдена ${ERROR_NOT_FOUND}`),
-        );
-      } else if (error instanceof CastError) {
-        next(new BadRequest(`Переданы некорректные данные ${ERROR_CODE}`));
-      } else {
-        next(error);
-      }
-    });
+    .catch(next);
 };
