@@ -1,3 +1,5 @@
+const { ValidationError, CastError } = require('mongoose').Error;
+const BadRequest = require('../error/BadRequest');
 const Conflict = require('../error/Conflict');
 const Forbidden = require('../error/Forbidden');
 const NotFound = require('../error/NotFound');
@@ -5,9 +7,10 @@ const Movie = require('../models/movies');
 const {
   CODE,
   CODE_CREATED,
-  MOVIEDElETED,
   FORBIDDENDELETE,
   CONFLICTEMOVIE,
+  NOTFOUNDMOVIE,
+  BADREQUESTDATA,
 } = require('../utils/constants');
 
 module.exports.getMovies = (req, res, next) => {
@@ -56,10 +59,16 @@ module.exports.createMovieCards = (req, res, next) => {
         })
           .then((card) => card.populate('owner'))
           .then((card) => res.status(CODE_CREATED).send(card))
-          .catch(next);
+          .catch((error) => {
+            if (error.name === ValidationError) {
+              next(new BadRequest(BADREQUESTDATA));
+            } else {
+              next(error);
+            }
+          });
       }
     })
-    .catch((error) => next(error));
+    .catch(next);
 };
 
 module.exports.deleteMovieCards = (req, res, next) => {
@@ -70,7 +79,7 @@ module.exports.deleteMovieCards = (req, res, next) => {
     ])
     .then((card) => {
       if (!card) {
-        throw new NotFound(MOVIEDElETED);
+        throw new NotFound(NOTFOUNDMOVIE);
       }
       if (card.owner._id.toString() !== req.user._id.toString()) {
         throw new Forbidden(FORBIDDENDELETE);
@@ -81,5 +90,11 @@ module.exports.deleteMovieCards = (req, res, next) => {
           res.send(cardDeleted);
         });
     })
-    .catch(next);
+    .catch((error) => {
+      if (error === CastError) {
+        next(new BadRequest(BADREQUESTDATA));
+      } else {
+        next(error);
+      }
+    });
 };

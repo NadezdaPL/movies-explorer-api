@@ -6,7 +6,6 @@ const usersRouter = require('./users');
 const auth = require('../middlewares/auth');
 const NotFound = require('../error/NotFound');
 const { NOTFOUNDPAGE } = require('../utils/constants');
-const errorHandler = require('../middlewares/errorHandler');
 
 router.use('/signin', signinRouter);
 router.use('/signup', signupRouter);
@@ -15,9 +14,8 @@ router.use(auth);
 
 router.use('/users', usersRouter);
 router.use('/movies', moviesRouter);
-router.use('*', (req, res) => {
-  const newError = new NotFound(NOTFOUNDPAGE);
-  errorHandler(newError, res);
+router.use('*', (req, res, next) => {
+  next(new NotFound(NOTFOUNDPAGE));
 });
 
 module.exports = router;
