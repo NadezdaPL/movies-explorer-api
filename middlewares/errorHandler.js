@@ -1,12 +1,13 @@
-const { ERROR_INTERNAL_SERVER } = require('../utils/constants');
+const {
+  ERROR_INTERNAL_SERVER,
+  SERVERERROR,
+} = require('../utils/constants');
 
-module.exports = (err, req, res, next) => {
-  const { statusCode = ERROR_INTERNAL_SERVER, message } = err;
-  res.status(statusCode).send({
-    message: statusCode === ERROR_INTERNAL_SERVER
-      ? 'На сервере произошла ошибка'
-      : message,
+module.exports = function errorHandler(err, req, res, next) {
+  const { type = ERROR_INTERNAL_SERVER, message } = err;
+  res.status(type).send({
+    message: type === ERROR_INTERNAL_SERVER ? SERVERERROR : message,
   });
 
-  return next();
+  next();
 };

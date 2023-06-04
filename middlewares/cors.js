@@ -3,8 +3,8 @@ const allowedCors = [
   'http://diploma-project.nomoredomains.rocks',
   'http://localhost:3000',
   'http://localhost:3001',
-  'https://158.160.38.71',
-  'http://158.160.38.71',
+  'https://158.160.105.141',
+  'http://158.160.105.141',
 ];
 
 module.exports = (req, res, next) => {
@@ -17,6 +17,7 @@ module.exports = (req, res, next) => {
     res.header('Access-Control-Allow-Origin', origin);
     res.header('Access-Control-Allow-Credentials', true);
   }
+
   if (method === 'OPTIONS') {
     res.header('Access-Control-Allow-Methods', DEFAULT_ALLOWED_METHODS);
     res.header('Access-Control-Allow-Headers', requestHeaders);

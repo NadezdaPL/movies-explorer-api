@@ -1,7 +1,5 @@
-const bcrypt = require('bcryptjs');
 const mongoose = require('mongoose');
-const validator = require('validator');
-const Unauthorized = require('../error/Unauthorized');
+const isEmail = require('validator/lib/isEmail');
 
 const userSchema = new mongoose.Schema({
   name: {
@@ -15,7 +13,7 @@ const userSchema = new mongoose.Schema({
     required: true,
     unique: true,
     validate: {
-      validator: (email) => validator.isEmail(email),
+      validator: (email) => isEmail(email),
       message: ({ value }) => `${value} не является действительным адресом электронной почты!`,
     },
   },
@@ -24,27 +22,6 @@ const userSchema = new mongoose.Schema({
     required: true,
     select: false,
   },
-}, { toJSON: { useProjection: true }, toObject: { useProjection: true } });
-
-userSchema.statics.findUserByCredentials = function (email, password, next) {
-  return this
-    .findOne({ email })
-    .select('+password')
-    .then((user) => {
-      if (!user) {
-        throw new Unauthorized('Неправильные почта или пароль');
-      }
-
-      return bcrypt.compare(password, user.password)
-        .then((matched) => {
-          if (!matched) {
-            throw new Unauthorized('Неправильные почта или пароль');
-          }
-
-          return user;
-        });
-    })
-    .catch(next);
-};
+}, { toJSON: { useProjection: true }, toObject: { useProjection: true }, versionKey: false });
 
 module.exports = mongoose.model('user', userSchema);
